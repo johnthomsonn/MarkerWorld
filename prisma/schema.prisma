@@ -1,0 +1,68 @@
+// Prisma schema for MarkerWorld
+// Fully compatible with both SQLite (for instant local zero-config) and PostgreSQL / Supabase
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgres"
+  url      = env("DIRECT_URL")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  name         String?
+  passwordHash String
+  avatarUrl    String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  ownedWorlds  World[]       @relation("WorldOwner")
+  memberships  WorldMember[]
+  markers      Marker[]
+}
+
+model World {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  inviteCode  String        @unique
+  ownerId     String
+  owner       User          @relation("WorldOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members     WorldMember[]
+  markers     Marker[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model WorldMember {
+  id       String   @id @default(cuid())
+  worldId  String
+  world    World    @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     String   @default("MEMBER") // "OWNER" | "MEMBER"
+  joinedAt DateTime @default(now())
+
+  @@unique([worldId, userId])
+}
+
+model Marker {
+  id          String    @id @default(cuid())
+  worldId     String
+  world       World     @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User      @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  lat         Float
+  lng         Float
+  imageUrl    String?
+  isResolved  Boolean   @default(false)
+  resolvedAt  DateTime?
+  resolvedBy  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
